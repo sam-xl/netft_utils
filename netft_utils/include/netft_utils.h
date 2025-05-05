@@ -6,6 +6,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2/convert.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include <netft_interfaces/srv/set_bias.hpp>
 #include <netft_interfaces/srv/set_max.hpp>
@@ -24,7 +25,7 @@
 namespace netft_utils
 {
 
-  class NetftUtils : rclcpp::Node
+  class NetftUtils : public rclcpp::Node
   {
   public:
     NetftUtils();
