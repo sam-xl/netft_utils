@@ -10,8 +10,9 @@ class LPFilter
 public:
   LPFilter(double deltaT, double cutoffFrequency, int numElements);
   bool update(std::vector<double> input, std::vector<double>& output);
-
+  
 private:
+  rclcpp::Logger logger = rclcpp::get_logger("LPFilter");
   bool initialized;
   int noElements;
   std::vector<double> in1, in2, out1, out2;
