@@ -20,8 +20,10 @@ geometry_msgs
 pluginlib
 tf2
 tf2_ros
+tf2_geometry_msgs
 netft_interfaces
 )
+
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
 find_package(${Dependency} REQUIRED)
 endforeach()
@@ -37,11 +39,17 @@ add_library(netft_rdt_driver SHARED
 )
 target_compile_features(netft_rdt_driver PUBLIC cxx_std_17)
 target_include_directories(netft_rdt_driver
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
+PUBLIC
+$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+$<INSTALL_INTERFACE:include>)
 ament_target_dependencies(netft_rdt_driver ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_link_libraries(netft_rdt_driver ${Boost_LIBRARIES})
+
+add_library(lpfilter SHARED src/lpfilter.cpp)
+ament_target_dependencies(lpfilter
+  ${THIS_PACKAGE_INCLUDE_DEPENDS}
+)
+target_link_libraries(lpfilter ${Boost_LIBRARIES})
 
 # Causes the visibility macros to use dllexport rather than dllimport,
 # which is appropriate when building the dll but not consuming it.
@@ -53,6 +61,12 @@ target_include_directories(netft_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(netft_node netft_rdt_driver)
+
+add_executable(netft_utils src/netft_utils.cpp)
+ament_target_dependencies(netft_utils PUBLIC 
+  ${THIS_PACKAGE_INCLUDE_DEPENDS}
+)
+target_link_libraries(netft_utils PUBLIC lpfilter)
 
 # Library for bringup with ros2_controls hardware_interface
 add_library(
@@ -88,6 +102,11 @@ install(TARGETS netft_hardware_interface
 install(
     TARGETS netft_node
     DESTINATION lib/${PROJECT_NAME}
+)
+
+install (
+  TARGETS netft_utils
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(TARGETS netft_rdt_driver
