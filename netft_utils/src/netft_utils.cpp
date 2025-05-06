@@ -68,7 +68,9 @@ namespace netft_utils
     listener = new tf2_ros::TransformListener(bufferCore);
 
     //Subscribe to the NetFT topic.
-    raw_data_sub = create_subscription<geometry_msgs::msg::WrenchStamped>("netft_data",100, &NetftUtils::netftCallback);
+    raw_data_sub = create_subscription<geometry_msgs::msg::WrenchStamped>(
+    "netft_data", 100,
+    [this](const geometry_msgs::msg::WrenchStamped::SharedPtr msg) { this->netftCallback(msg); });
 
     //Publish on the /netft_transformed_data topic. Queue up to 100000 data points
     netft_raw_world_data_pub = create_publisher<geometry_msgs::msg::WrenchStamped>("raw_world", 100000);
@@ -76,15 +78,60 @@ namespace netft_utils
     netft_tool_data_pub = create_publisher<geometry_msgs::msg::WrenchStamped>("transformed_tool", 100000);
     netft_cancel_pub = create_publisher<netft_interfaces::msg::Cancel>("cancel", 100000);
 
-    //Advertise bias and threshold services
-    bias_service = create_service<netft_interfaces::srv::SetBias>("bias", &NetftUtils::fixedOrientationBias);
-    gravity_comp_service = create_service<netft_interfaces::srv::SetBias>("gravity_comp", &NetftUtils::compensateForGravity);
-    set_max_service = create_service<netft_interfaces::srv::SetMax>("set_max_values", &NetftUtils::setMax);
-    threshold_service = create_service<netft_interfaces::srv::SetThreshold>("set_threshold", &NetftUtils::setThreshold);
-    weight_bias_service = create_service<netft_interfaces::srv::SetBias>("set_weight_bias", &NetftUtils::setWeightBias);
-    get_weight_service = create_service<netft_interfaces::srv::GetDouble>("get_weight", &NetftUtils::getWeight);
-    filter_service = create_service<netft_interfaces::srv::SetFilter>("filter", &NetftUtils::setFilter);
-  }
+   //Advertise bias and threshold services
+  bias_service = create_service<netft_interfaces::srv::SetBias>(
+    "bias", [this](
+              const std::shared_ptr<netft_interfaces::srv::SetBias::Request> request,
+              std::shared_ptr<netft_interfaces::srv::SetBias::Response> response) {
+      this->fixedOrientationBias(*request, *response);
+    });
+
+  gravity_comp_service = create_service<netft_interfaces::srv::SetBias>(
+    "gravity_comp", [this](
+                      const std::shared_ptr<netft_interfaces::srv::SetBias::Request> request,
+                      std::shared_ptr<netft_interfaces::srv::SetBias::Response> response) {
+      this->compensateForGravity(*request, *response);
+    });
+
+  set_max_service = create_service<netft_interfaces::srv::SetMax>(
+    "set_max_"
+    "values",
+    [this](
+      const std::shared_ptr<netft_interfaces::srv::SetMax::Request> request,
+      std::shared_ptr<netft_interfaces::srv::SetMax::Response> response) {
+      this->setMax(*request, *response);
+    });
+
+  threshold_service = create_service<netft_interfaces::srv::SetThreshold>(
+    "set_threshold", [this](
+                       const std::shared_ptr<netft_interfaces::srv::SetThreshold::Request> request,
+                       std::shared_ptr<netft_interfaces::srv::SetThreshold::Response> response) {
+      this->setThreshold(*request, *response);
+    });
+
+  weight_bias_service = create_service<netft_interfaces::srv::SetBias>(
+    "set_weight_"
+    "bias",
+    [this](
+      const std::shared_ptr<netft_interfaces::srv::SetBias::Request> request,
+      std::shared_ptr<netft_interfaces::srv::SetBias::Response> response) {
+      this->setWeightBias(*request, *response);
+    });
+
+  get_weight_service = create_service<netft_interfaces::srv::GetDouble>(
+    "get_weight", [this](
+                    const std::shared_ptr<netft_interfaces::srv::GetDouble::Request> request,
+                    std::shared_ptr<netft_interfaces::srv::GetDouble::Response> response) {
+      this->getWeight(*request, *response);
+    });
+
+  filter_service = create_service<netft_interfaces::srv::SetFilter>(
+    "filter", [this](
+                const std::shared_ptr<netft_interfaces::srv::SetFilter::Request> request,
+                std::shared_ptr<netft_interfaces::srv::SetFilter::Response> response) {
+      this->setFilter(*request, *response);
+    });
+}
 
   void NetftUtils::setUserInput(std::string world, std::string ft, double force, double torque)
   {
@@ -136,7 +183,7 @@ namespace netft_utils
     netft_tool_data_pub->publish( tf_data_tool );
     netft_cancel_pub->publish( cancel_msg );
 
-    rclcpp::spin_some(this->make_shared());
+    rclcpp::spin_some(this->shared_from_this());
   }
 
   void NetftUtils::copyWrench(geometry_msgs::msg::WrenchStamped &in, geometry_msgs::msg::WrenchStamped &out, geometry_msgs::msg::WrenchStamped &bias)
@@ -442,61 +489,63 @@ namespace netft_utils
       cancel_count = MAX_CANCEL;
       cancel_wait = MAX_WAIT;
     }
-  }        
+  }               
+}
 
-  
-  int main(int argc, char **argv)
+int main(int argc, char **argv)
+{
+  // Initialize the ros netft_utils_node
+  rclcpp::init(argc, argv);
+
+  // Instantiate utils class
+  // NetftUtils utils;
+  auto utils = std::make_shared<netft_utils::NetftUtils>();
+  // Initialize utils
+  utils->initialize();
+
+  // Set up a multi-threaded executor
+  using rclcpp::executors::MultiThreadedExecutor;
+  MultiThreadedExecutor exec;
+  exec.add_node(utils);
+  exec.spin();
+
+
+  // Set up user input
+  std::string world_frame;
+  std::string ft_frame;
+  double forceMaxU = 0.0;
+  double torqueMaxU = 0.0;
+  if(argc<3)
   {
-    // Initialize the ros netft_utils_node
-    rclcpp::init(argc, argv);
-
-    // Instantiate utils class
-    NetftUtils utils;
-    using rclcpp::executors::MultiThreadedExecutor;
-    MultiThreadedExecutor exec;
-    exec.spin();
-
-    // Initialize utils
-    utils.initialize();
-
-    // Set up user input
-    std::string world_frame;
-    std::string ft_frame;
-    double forceMaxU = 0.0;
-    double torqueMaxU = 0.0;
-    if(argc<3)
-    {
-      RCLCPP_FATAL(utils.getLog(), "You must pass in at least the world and ft frame as command line arguments. Argument options are [world frame, ft frame, max force, max torque]");
-      return 1;
-    }
-    else if(argc>=6)
-    {
-      RCLCPP_FATAL(utils.getLog(), "Too many arguments for netft_utils");
-    }
-    else
-    {
-      world_frame = argv[1];
-      ft_frame = argv[2];
-      if(argc>=4)
-        forceMaxU = atof(argv[3]);
-      if(5==argc)
-        torqueMaxU = atof(argv[4]);
-    }
-    utils.setUserInput(world_frame, ft_frame, forceMaxU, torqueMaxU);
-
-    // Main ros loop
-    rclcpp::Rate loop_rate(500);
-    //ros::Time last;
-    while(rclcpp::ok())
-    {
-      utils.update();
-      loop_rate.sleep();
-      //ros::Time curr = ros::Time::now();
-      //ROS_INFO_STREAM("Loop time: " <<  curr.toSec()-last.toSec());
-      //last = curr;
-    }
-
-    return 0;
+    RCLCPP_FATAL(utils->getLog(), "You must pass in at least the world and ft frame as command line arguments. Argument options are [world frame, ft frame, max force, max torque]");
+    return 1;
   }
-       
+  else if(argc>=6)
+  {
+    RCLCPP_FATAL(utils->getLog(), "Too many arguments for netft_utils");
+  }
+  else
+  {
+    world_frame = argv[1];
+    ft_frame = argv[2];
+    if(argc>=4)
+      forceMaxU = atof(argv[3]);
+    if(5==argc)
+      torqueMaxU = atof(argv[4]);
+  }
+  utils->setUserInput(world_frame, ft_frame, forceMaxU, torqueMaxU);
+
+  // Main ros loop
+  rclcpp::Rate loop_rate(500);
+  //ros::Time last;
+  while(rclcpp::ok())
+  {
+    utils->update();
+    loop_rate.sleep();
+    //ros::Time curr = ros::Time::now();
+    //ROS_INFO_STREAM("Loop time: " <<  curr.toSec()-last.toSec());
+    //last = curr;
+  }
+
+  return 0;
 }
