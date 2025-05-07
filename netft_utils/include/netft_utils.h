@@ -18,13 +18,20 @@
 #include <lpfilter.h>
 #include <math.h>
 
-/**
- * This program takes force/torque data and applies transforms to usable data
+/****
+ * @brief ROS2 node for processing NetFT force/torque sensor data with transformations, bias correction, filtering, and safety monitoring.
+ *
+ * The NetftUtils class subscribes to raw force/torque data, applies coordinate frame transformations, bias and gravity compensation, low-pass filtering, and thresholding. It monitors force/torque limits and publishes processed data and control messages. The class provides ROS services for configuring bias, gravity compensation, thresholds, filtering, and force/torque limits.
  */
 
 namespace netft_utils
 {
 
+  /**
+   * @brief ROS2 node for processing NetFT force/torque sensor data with filtering, bias correction, gravity compensation, and safety monitoring.
+   *
+   * The NetftUtils class subscribes to raw force/torque data, applies coordinate transformations, bias and gravity compensation, low-pass filtering, and thresholding. It monitors force/torque limits and publishes processed data and safety control messages. The class provides ROS services for configuring bias, gravity compensation, filtering, thresholds, and force/torque limits.
+   */
   class NetftUtils : public rclcpp::Node
   {
   public:

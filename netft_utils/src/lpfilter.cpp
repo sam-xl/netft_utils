@@ -15,6 +15,15 @@ Author: Alex von Sternberg
 
 #include <lpfilter.h>
 
+/**
+ * @brief Constructs a second-order low-pass digital filter with specified parameters.
+ *
+ * Initializes filter coefficients and internal state for a multi-element low-pass filter using the bilinear transform. Validates input parameters and prepares the filter for processing input vectors of the specified size.
+ *
+ * @param deltaT Sampling interval in seconds; must be greater than zero.
+ * @param cutoffFrequency Cutoff frequency in Hz; must be greater than zero.
+ * @param numElements Number of parallel filter elements; must be positive.
+ */
 LPFilter::LPFilter(double deltaT, double cutoffFrequency, int numElements):
   initialized(false),
   noElements(0),
@@ -63,6 +72,17 @@ LPFilter::LPFilter(double deltaT, double cutoffFrequency, int numElements):
   }
 }
   
+/**
+ * @brief Applies the low-pass filter to the input vector and updates the output vector.
+ *
+ * Processes each element of the input vector using the filter's coefficients and internal state,
+ * updating the output vector with the filtered results. Returns false if the filter is not initialized
+ * or if the input/output vector sizes do not match the expected dimensions.
+ *
+ * @param input Vector of input values to be filtered.
+ * @param output Vector to store the filtered output values; must be pre-sized appropriately.
+ * @return true if filtering was successful; false if initialization or size checks fail.
+ */
 bool LPFilter::update(std::vector<double> input, std::vector<double>& output)
 {
   if(!initialized)
