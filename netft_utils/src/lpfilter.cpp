@@ -15,6 +15,15 @@ Author: Alex von Sternberg
 
 #include <lpfilter.h>
 
+/**
+ * @brief Constructs a second-order low-pass digital filter with specified parameters.
+ *
+ * Initializes filter coefficients and internal state for a multi-element low-pass filter using the bilinear transform. Validates input parameters and prepares the filter for processing input vectors of the specified size.
+ *
+ * @param deltaT Sampling interval in seconds; must be greater than zero.
+ * @param cutoffFrequency Cutoff frequency in Hz; must be greater than zero.
+ * @param numElements Number of parallel filter elements; must be positive.
+ */
 LPFilter::LPFilter(double deltaT, double cutoffFrequency, int numElements):
   initialized(false),
   noElements(0),
@@ -28,7 +37,7 @@ LPFilter::LPFilter(double deltaT, double cutoffFrequency, int numElements):
   initialized = true;
   if(numElements<=0)
   {
-    RCLCPP_ERROR_STREAM("LPFilter was passed invalid number of elements. Not filtering.");
+    RCLCPP_ERROR_STREAM(logger, "LPFilter was passed invalid number of elements. Not filtering.");
     initialized = false;
   }
   else
@@ -37,12 +46,12 @@ LPFilter::LPFilter(double deltaT, double cutoffFrequency, int numElements):
   }
   if(deltaT<=0)
   {
-    RCLCPP_ERROR_STREAM("LPFilter was passed invalid deltaT. Not Filtering.");
+    RCLCPP_ERROR_STREAM(logger, "LPFilter was passed invalid deltaT. Not Filtering.");
     initialized = false;
   }
   if(cutoffFrequency <=0)
   {
-    RCLCPP_ERROR_STREAM("LPFilter was passed invalid cuttoffFrequency. Not Filtering.");
+    RCLCPP_ERROR_STREAM(logger, "LPFilter was passed invalid cuttoffFrequency. Not Filtering.");
     initialized = false;
   }
   else
@@ -59,20 +68,31 @@ LPFilter::LPFilter(double deltaT, double cutoffFrequency, int numElements):
     in2.resize(noElements);
     out1.resize(noElements);
     out2.resize(noElements);
-    RCLCPP_INFO_STREAM("cutoffFrequency: " << cutoffFrequency << ". omega_a: " << omega_a << ". den: " << den << ". a0: " << a0 << ". a1: " << a1 << ". a2: " << a2 << ". b1: " << b1 << ". b2: " << b2);
+    // RCLCPP_INFO_STREAM("cutoffFrequency: " << cutoffFrequency << ". omega_a: " << omega_a << ". den: " << den << ". a0: " << a0 << ". a1: " << a1 << ". a2: " << a2 << ". b1: " << b1 << ". b2: " << b2);
   }
 }
   
+/**
+ * @brief Applies the low-pass filter to the input vector and updates the output vector.
+ *
+ * Processes each element of the input vector using the filter's coefficients and internal state,
+ * updating the output vector with the filtered results. Returns false if the filter is not initialized
+ * or if the input/output vector sizes do not match the expected dimensions.
+ *
+ * @param input Vector of input values to be filtered.
+ * @param output Vector to store the filtered output values; must be pre-sized appropriately.
+ * @return true if filtering was successful; false if initialization or size checks fail.
+ */
 bool LPFilter::update(std::vector<double> input, std::vector<double>& output)
 {
   if(!initialized)
   {
-    RCLCPP_ERROR_STREAM("LPFilter was not initialized correctly. Not filtering data.");
+    RCLCPP_ERROR_STREAM(logger, "LPFilter was not initialized correctly. Not filtering data.");
     return false;
   }
   if(input.size() != in1.size() || output.size() != out1.size())
   {
-    RCLCPP_ERROR_STREAM("LPFilter incorrect input or output size");
+    RCLCPP_ERROR_STREAM(logger, "LPFilter incorrect input or output size");
     return false;
   }
   for(int i=0; i<noElements; i++)

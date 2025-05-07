@@ -6,6 +6,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2/convert.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include <netft_interfaces/srv/set_bias.hpp>
 #include <netft_interfaces/srv/set_max.hpp>
@@ -17,14 +18,21 @@
 #include <lpfilter.h>
 #include <math.h>
 
-/**
- * This program takes force/torque data and applies transforms to usable data
+/****
+ * @brief ROS2 node for processing NetFT force/torque sensor data with transformations, bias correction, filtering, and safety monitoring.
+ *
+ * The NetftUtils class subscribes to raw force/torque data, applies coordinate frame transformations, bias and gravity compensation, low-pass filtering, and thresholding. It monitors force/torque limits and publishes processed data and control messages. The class provides ROS services for configuring bias, gravity compensation, thresholds, filtering, and force/torque limits.
  */
 
 namespace netft_utils
 {
 
-  class NetftUtils : rclcpp::Node
+  /**
+   * @brief ROS2 node for processing NetFT force/torque sensor data with filtering, bias correction, gravity compensation, and safety monitoring.
+   *
+   * The NetftUtils class subscribes to raw force/torque data, applies coordinate transformations, bias and gravity compensation, low-pass filtering, and thresholding. It monitors force/torque limits and publishes processed data and safety control messages. The class provides ROS services for configuring bias, gravity compensation, filtering, thresholds, and force/torque limits.
+   */
+  class NetftUtils : public rclcpp::Node
   {
   public:
     NetftUtils();
