@@ -1,4 +1,3 @@
-
 /*
 Copyright (c) 2016, Los Alamos National Security, LLC
 All rights reserved.
@@ -49,7 +48,12 @@ namespace netft_utils
     return this->get_logger();
   }
 
-  void NetftUtils::initialize()
+  /**
+ * @brief Initializes the NetftUtils node, setting up publishers, subscribers, and services.
+ *
+ * Configures internal state, subscribes to raw NetFT wrench data, advertises publishers for processed wrench and cancel messages, and creates services for biasing, gravity compensation, thresholding, filtering, and related operations. Also initializes the TF2 transform listener for frame transformations.
+ */
+void NetftUtils::initialize()
   {
     //lp = new LPFilter(0.002,200,6);
 
@@ -133,6 +137,14 @@ namespace netft_utils
     });
 }
 
+  /**
+   * @brief Sets the world and force-torque sensor frame names and optionally updates user-defined force and torque limits.
+   *
+   * @param world Name of the world reference frame.
+   * @param ft Name of the force-torque sensor frame.
+   * @param force Maximum allowable force; updates the user-defined limit if nonzero.
+   * @param torque Maximum allowable torque; updates the user-defined limit if nonzero.
+   */
   void NetftUtils::setUserInput(std::string world, std::string ft, double force, double torque)
   {
     world_frame = world;
@@ -147,6 +159,11 @@ namespace netft_utils
     }
   }
 
+  /**
+   * @brief Updates the internal state, applies filtering and transforms, checks force/torque limits, and publishes processed wrench data.
+   *
+   * If a new filter is requested, replaces the existing filter with updated parameters. Looks up and updates the transform between the force-torque sensor and world frames. Resets the translation component of the transform. Checks if force or torque limits are exceeded and updates the cancel message accordingly. Publishes the latest raw and transformed wrench data and cancel status. Processes any pending ROS callbacks.
+   */
   void NetftUtils::update()
   {
     // Check for a filter
@@ -186,6 +203,15 @@ namespace netft_utils
     rclcpp::spin_some(this->shared_from_this());
   }
 
+  /**
+   * @brief Copies a wrench message, subtracting a bias from each force and torque component.
+   *
+   * The output wrench's header and frame ID are set to match the input. Each force and torque component is computed as the input value minus the corresponding bias value.
+   *
+   * @param in Input wrench message.
+   * @param out Output wrench message with bias subtracted.
+   * @param bias Wrench message representing the bias to subtract.
+   */
   void NetftUtils::copyWrench(geometry_msgs::msg::WrenchStamped &in, geometry_msgs::msg::WrenchStamped &out, geometry_msgs::msg::WrenchStamped &bias)
   {
     out.header.stamp = in.header.stamp;
@@ -445,6 +471,11 @@ namespace netft_utils
     return true;    
   }
 
+  /**
+   * @brief Monitors force and torque magnitudes and manages cancel signaling if limits are exceeded.
+   *
+   * Computes the magnitudes of force and torque in the tool frame and compares them to configured maximums, which depend on whether biasing is active. If limits are exceeded, sets a cancel message and decrements a counter to limit repeated cancel signals. Implements a wait period after repeated cancels before allowing new cancels. Resets counters when force and torque return to safe levels.
+   */
   void NetftUtils::checkMaxForce()
   {
     double fMag = pow((pow(tf_data_tool.wrench.force.x, 2.0) + pow(tf_data_tool.wrench.force.y, 2.0) + pow(tf_data_tool.wrench.force.z, 2.0)), 0.5);
@@ -492,6 +523,15 @@ namespace netft_utils
   }               
 }
 
+/**
+ * @brief Entry point for the netft_utils ROS 2 node.
+ *
+ * Initializes ROS 2, creates and configures the NetftUtils node, processes command-line arguments for frame names and optional force/torque limits, and enters the main loop to process wrench data and update the node at a fixed rate.
+ *
+ * @param argc Number of command-line arguments.
+ * @param argv Array of command-line argument strings.
+ * @return int Exit code (0 for success, nonzero for failure).
+ */
 int main(int argc, char **argv)
 {
   // Initialize the ros netft_utils_node

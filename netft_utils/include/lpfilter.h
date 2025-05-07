@@ -5,6 +5,15 @@
 #include <rclcpp/rclcpp.hpp>
 #include <math.h>
 
+/**
+ * @brief Implements a multi-element low-pass filter.
+ *
+ * The LPFilter class applies a configurable low-pass filter to input vectors, supporting multiple elements in parallel. It maintains internal state for each element and allows repeated filtering of sequential data.
+ *
+ * @param deltaT Sampling interval in seconds.
+ * @param cutoffFrequency Cutoff frequency of the filter in Hz.
+ * @param numElements Number of elements to filter in each input vector.
+ */
 class LPFilter
 {
 public:
